@@ -1,0 +1,9 @@
+formatter = "markdown table"
+
+[template]
+  content = "## Requirements\n\n{{ .Requirements }}\n\n## Providers\n\n{{ .Providers }}\n\n## Modules\n\n{{ .Modules }}\n\n## Resources\n\n{{ .Resources }}\n\n## Inputs\n\n{{ .Inputs }}\n\n## Outputs\n\n{{ .Outputs }}"
+
+[settings]
+  anchor = true
+  hide-empty = false
+  lockfile = true
