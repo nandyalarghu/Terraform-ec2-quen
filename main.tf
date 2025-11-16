@@ -1,48 +1,79 @@
-# Example VPC configuration
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+# Main Terraform Configuration
+# This configuration deploys EC2 instances using the reusable EC2 module
 
-  tags = {
-    Name = "main-vpc-${var.environment}"
+# Data source to get latest Amazon Linux 2 AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 }
 
-# Internet Gateway
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+# Data source to get availability zones
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
-  tags = {
-    Name = "main-igw-${var.environment}"
+# Data source to get default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Data source to get subnets in the default VPC
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
   }
 }
 
-# Example S3 bucket for storing artifacts
-resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "my-terraform-artifacts-${var.environment}-${random_string.suffix.result}"
+# Using the EC2 module to create an instance
+module "ec2_instance" {
+  source = "./modules/ec2"
 
-  tags = {
-    Name        = "artifact-bucket-${var.environment}"
-    Environment = var.environment
-  }
+  name         = "${var.environment}-web-server"
+  ami_id       = data.aws_ami.amazon_linux.id
+  instance_type = "t3.micro"
+  key_name     = "my-key-pair"  # Replace with your key pair name
+  subnet_id    = tolist(data.aws_subnets.default.ids)[0]
+  security_group_ids = [
+    aws_security_group.web_sg.id
+  ]
+
+  tags = merge(
+    var.default_tags,
+    {
+      Environment = var.environment
+      Module      = "EC2"
+    }
+  )
 }
 
-# Random string to ensure unique bucket name
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-  upper   = false
-}
-
-# Example security group
+# Security group for the web server
 resource "aws_security_group" "web_sg" {
-  name_prefix = "web-sg-${var.environment}"
-  vpc_id      = aws_vpc.main.id
+  name_prefix = "${var.environment}-web-"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # In production, restrict this to your IP
+  }
 
   ingress {
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -54,7 +85,11 @@ resource "aws_security_group" "web_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "web-security-group-${var.environment}"
-  }
+  tags = merge(
+    var.default_tags,
+    {
+      Name        = "${var.environment}-web-sg"
+      Environment = var.environment
+    }
+  )
 }

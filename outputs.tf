@@ -1,19 +1,24 @@
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = aws_vpc.main.id
+output "instance_id" {
+  description = "ID of the EC2 instance"
+  value       = module.ec2_instance.instance_id
 }
 
-output "internet_gateway_id" {
-  description = "ID of the Internet Gateway"
-  value       = aws_internet_gateway.main.id
+output "instance_public_ip" {
+  description = "Public IP address of the EC2 instance"
+  value       = module.ec2_instance.public_ip
 }
 
-output "artifact_bucket_name" {
-  description = "Name of the S3 bucket for artifacts"
-  value       = aws_s3_bucket.artifact_bucket.bucket
+output "instance_public_dns" {
+  description = "Public DNS name of the EC2 instance"
+  value       = module.ec2_instance.public_dns
 }
 
-output "web_security_group_id" {
-  description = "ID of the web security group"
+output "security_group_id" {
+  description = "ID of the security group"
   value       = aws_security_group.web_sg.id
+}
+
+output "availability_zone" {
+  description = "Availability zone of the EC2 instance"
+  value       = module.ec2_instance.availability_zone
 }
